@@ -3,7 +3,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 const authenticateApiKey = require('../middleware/auth');
-const { validateProduct } = require('../middleware/validation');
+const validateProduct = require('../middleware/validation');
 const { AppError, NotFoundError, ValidationError, AuthenticationError, AuthorizationError } = require('../errors/customErrors');
 
 const asyncHandler = fn => (req, res, next) => {
@@ -17,14 +17,6 @@ const asyncHandler = fn => (req, res, next) => {
 // or dependency injection, but let's keep it simpler for now and modify server.js slightly.
 
 // GET /api/products: List all products
-router.use(asyncHandler(async (req, res, next) => {
-    const apiKey = req.headers['x-api-key'];
-    const expectedApiKey = process.env.API_KEY;
-    if (!apiKey) throw new AuthenticationError('API Key missing');
-    if (apiKey !== expectedApiKey) throw new AuthorizationError('Invalid API Key');
-    next();
-}));
-
 router.get('/', asyncHandler(async (req, res, next) => {
   const products = req.app.locals.products;
   res.json(products);
@@ -41,7 +33,7 @@ router.get('/:id', asyncHandler(async (req, res, next) => {
 }));
 
 // POST /api/products: Create a new product
-router.post('/', validateProduct, asyncHandler(async (req, res, next) => {
+router.post('/', validateProduct(), asyncHandler(async (req, res, next) => {
   const products = req.app.locals.products;
   const { name, description, price, category, inStock } = req.body;
 

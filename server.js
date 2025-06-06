@@ -1,7 +1,6 @@
 // server.js - Starter Express server for Week 2 assignment
 
 // Import required modules
-require('dotenv').config();
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const productRoutes = require('./routes/productRoutes');
@@ -12,7 +11,7 @@ const { AppError, NotFoundError, ValidationError, AuthenticationError, Authoriza
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 4000;  // Using port 4000 instead of 3000
 
 // Middleware setup
 app.use(express.json()); // Use express.json() directly instead of body-parser
@@ -22,12 +21,11 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-// All other routes require authentication
-app.use(authenticateApiKey);
-
-
-// Logger middleware (after authentication)
+// Logger middleware (before authentication)
 app.use(loggerMiddleware);
+
+// All API routes require authentication
+app.use('/api', authenticateApiKey);
 
 // Mount product routes (after authentication)
 app.use('/api/products', productRoutes);
@@ -37,7 +35,7 @@ app.use((err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
-  console.error('ERROR', err);
+  console.error(`ERROR in ${req.method} ${req.path}:`, err);
 
   if (err.isOperational) {
     res.status(err.statusCode).json({
@@ -54,8 +52,17 @@ app.use((err, req, res, next) => {
 });
 
 // Not found handler
-app.all('*', (req, res, next) => {
-  next(new NotFoundError(`Can't find ${req.url} on this server!`));
+app.all('*', (req, res) => {
+  // Check if the request is for an API endpoint
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({
+      status: 'fail',
+      message: 'Invalid API endpoint'
+    });
+  }
+  
+  // For non-API routes, show a friendly HTML message
+  res.status(404).send('<h1>404 - Page Not Found</h1><p>The page you are looking for does not exist.</p>');
 });
 
 // Sample in-memory products database
@@ -89,6 +96,29 @@ app.locals.products = [
 // Start the server
 const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof PORT === 'string' ? `Pipe ${PORT}` : `Port ${PORT}`;
+
+  // Handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(`${bind} requires elevated privileges`);
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(`${bind} is already in use`);
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
 });
 
 // Handle unhandled promise rejections

@@ -1,9 +1,9 @@
 // middleware/logger.js
 const loggerMiddleware = (req, res, next) => {
     const timestamp = new Date().toISOString();
-    // Use req.url for cleaner logging and to avoid malformed URLs
-    const url = req.url || '/';
-    console.log(`${timestamp} ${req.method} ${url}`);
+    // Use req.path for cleaner logging
+    const path = req.path || '/';
+    console.log(`${timestamp} ${req.method} ${path}`);
     next();
 };
 
